@@ -16,6 +16,10 @@ This exercise has four challenges: first, manipulating the data in order to get 
 
 ## Solution
 
-Solution and R code can be found here:
+Solution and R code can be found here: [Solution](https://jsnjuan.github.io/SimpleHierarchicalModeling/)
 
-[Solution](https://jsnjuan.github.io/SimpleHierarchicalModeling/)
+## Comparison between Bayes and Maximum likelihood estimators
+
+Maximum likelihood estimators (MLE) are also calculated, in addition to Bayes estimators (BE) asked for. Then a comparison between both BE and MLE estimators is made. Conclusion in this exercise is that BE shows a regularization-like behavior, since estimators are more stable and with less variance that MLE, as shown in the following picture.
+
+![](img/BE_MLE_comp.png)
