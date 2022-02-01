@@ -1,5 +1,5 @@
 ---
-title: "solution"
+title: "Simple Hierarchical Modeling exercise"
 knit: (function(input_file, encoding) {
  out_dir <- 'docs';
  rmarkdown::render(input_file,
@@ -21,6 +21,7 @@ library(hrbrthemes)
 library(kableExtra)
 library(tidyverse)
 library(invgamma)
+library(datasets)
 
 knitr::opts_chunk$set(echo = TRUE, error = TRUE)
 format_table_salida <- function() {
@@ -52,18 +53,87 @@ thm_dotplot <-  theme_ipsum_ps(grid="", axis="xy") +
 
 
 
-## Read data
+Let's first read the data we are going to work with:
 
 ```{r, message=FALSE}
-# Leemos la información de las encuestas
+# Reading poll data
 poll_data <- foreign::read.dta("data/pew_research_center_june_elect_wknd_data.dta")
-# Leemos los resultados finales de las elecciones de 2008
+# Reading 2008 election results
 elec_2008 <- read_csv('data/2008ElectionResult.csv') %>% 
   mutate(state=str_to_lower(state))
 
 ```
 
-* Estima el porcentaje de la población de cada estado (excluyendo Alaska, Hawai, y DC)  que se considera *very liberal*, utilizando el estimador de máxima verosimilitud.
+* Lets calculate and plot very liberal proportion among survey respondents against Obama vote share:
+
+```{r, warning=FALSE, message=FALSE, fig.align='center'}
+vl_prop <- poll_data %>% 
+  # Excluding Alaska, Hawai, DC
+  filter(state %nin% c('alaska', 'hawaii', 'washington dc')) %>%
+  drop_na(ideo) %>% 
+  mutate(vl = as.numeric(ideo == 'very liberal')) %>% 
+  group_by(state) %>% 
+  summarise(vl_p = sum(vl)/n())
+
+vl_prop_ovs <- left_join(vl_prop, elec_2008, by='state')
+vl_prop_ovs <- vl_prop_ovs %>% mutate(state_abb=state.abb[match(str_to_title(state), state.name)])
+
+vl_prop_ovs
+
+ggplot(vl_prop_ovs, aes(x = vl_p, y = vote_Obama_pct, label=state)) + 
+  geom_point() + 
+  geom_text(aes(label=state_abb), hjust=0.45, vjust=-0.25) + 
+  labs(x ='Very liberal proportion', y='Obama vote share') + 
+  scale_x_continuous(labels = function(x) paste0(x*100, "%")) +
+  scale_y_continuous(labels = function(x) paste0(x, "%")) +
+  thm
+```
+
+Following task is to calculate Bayes posterior mean, so we need to have an initial distribution. As depicted in book's example 2.7, one way to construct an initial distribution is [METHODOLOGY]
+
+We have following equations that parameters must satisfy in order to:
+
+\begin{align*}
+E(nvl_j) &= \frac{n_j\alpha}{\alpha + \beta} \\
+Var(nvl_j) &= \frac{n_j\alpha\beta(\alpha + \beta + n_j)}{ (\alpha + \beta)^2(\alpha + \beta+1)}
+\end{align*}
+
+Parameters of the previous system of equations are:
+
++ $nvl_j$ as number of survey respondents with a very liberal stance in state $j$.
++ $n_j$ number of surveys taken on $j$ state.
+
+Rewriting the system in  terms of proportions, it results:
+
+\begin{align*}
+E\left(\frac{nvl_j}{n_j}\right) &= \frac{\alpha}{\alpha + \beta} \\
+Var\left(\frac{nvl_j}{n_j}\right) &= \frac{\alpha\beta(\alpha + \beta + n_j)}{n_j(\alpha + \beta)^2(\alpha + \beta+1)}
+\end{align*}
+
+In this case, we should note that to construct proportion in the variance equation, we should divide by constant $n_j^2$ both sides, while 
+$nvl_j$ remains as unknown parameter. Then we replace expected value and variance with equivalent sample values. Similarly, $n_j$ is replaced with sample mean (number of surveys by state in average). Following code calculates these values:
+
+
+
+```{r, warning=FALSE, message=FALSE, fig.align='center'}
+E_p <- conteo_edo %>% summarize( e_p = mean(n_very_liberal/n )  ) %>% pull(e_p)
+E_n <- conteo_edo %>% pull(n) %>% mean()
+Var_p <- conteo_edo %>% summarize( var_p = var(n_very_liberal/n)  ) %>% pull(var_p)
+paste('E_p:', E_p)
+paste('Var_p:', Var_p)
+paste('E_n:', E_n)
+
+```
+
+
+[PENDING OF TRANSLATION]
+
+
+
+
+
+
+of  Estima el porcentaje de la población de cada estado (excluyendo Alaska, Hawai, y DC)  que se considera *very liberal*, utilizando el estimador de máxima verosimilitud.
 
 
 
