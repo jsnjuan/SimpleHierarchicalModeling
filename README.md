@@ -1,8 +1,8 @@
 # Simple Hierarchical Modeling exercise
 
- This repo contains a solution to to exercise 21, chapter 2 from **Bayesian Data Analysis** book from Gelman *et al*. Electronic edition from the book can be found here:
+ This repo contains a  [Solution](https://jsnjuan.github.io/SimpleHierarchicalModeling/) to exercise 21, chapter 2 from **Bayesian Data Analysis** book from Gelman *et al*. Electronic edition from the book can be found here:
 
- [Bayesian Data Analysis, Third edition](https://www.stat.columbia.edu/~gelman/book/BDA3.pdf)
+[Bayesian Data Analysis, Third edition](https://www.stat.columbia.edu/~gelman/book/BDA3.pdf)
 
 ## Problem description
 
@@ -16,10 +16,12 @@ This exercise has four challenges: first, manipulating the data in order to get 
 
 ## Solution
 
-Solution and R code can be found here: [Solution](https://jsnjuan.github.io/SimpleHierarchicalModeling/)
+[INSERT IMAGE OF PLOTS]
+
+Related R code can be found here: [Solution](https://jsnjuan.github.io/SimpleHierarchicalModeling/)
 
 ## Comparison between Bayes and Maximum likelihood estimators
 
-Maximum likelihood estimators (MLE) are also calculated, in addition to Bayes estimators (BE) asked for. Then a comparison between both BE and MLE estimators is made. Conclusion in this exercise is that BE shows a regularization-like behavior, since estimators are more stable and with less variance that MLE, as shown in the following picture.
+Maximum likelihood estimators (MLE) are also calculated, in addition to Bayes estimators (BE) initially asked for. Then a comparison between both BE and MLE estimators is made. Conclusion in this exercise is that BE shows a regularization-like behavior, since estimators are more stable and with less variance that MLE, as shown in the following picture.
 
 ![](img/BE_MLE_comp.png)

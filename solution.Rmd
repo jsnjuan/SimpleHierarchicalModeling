@@ -26,22 +26,22 @@ library(datasets)
 knitr::opts_chunk$set(echo = TRUE, error = TRUE)
 format_table_salida <- function() {
   if (knitr::is_latex_output())
-    "latex" else "html"
+    'latex' else 'html'
 }
 
-thm <- theme_ipsum_ps(grid="XY", axis="xy") + 
+thm <- theme_ipsum_ps(grid='XY', axis='xy') + 
   theme(#axis.text.y=element_blank(), 
-        panel.background = element_rect(fill = "#EAFAF1", colour = NA),
-        plot.background = element_rect(fill = "#EAFAF1", colour = NA),
-        legend.background = element_rect(fill = "#EAFAF1", colour = NA),
-        legend.box.background = element_rect(fill = "#EAFAF1", colour = NA))
+        panel.background = element_rect(fill = '#EAFAF1', colour = NA),
+        plot.background = element_rect(fill = '#EAFAF1', colour = NA),
+        legend.background = element_rect(fill = '#EAFAF1', colour = NA),
+        legend.box.background = element_rect(fill = '#EAFAF1', colour = NA))
 
-bg_green <- theme(panel.background = element_rect(fill = "#EAFAF1", colour = NA),
-        plot.background = element_rect(fill = "#EAFAF1", colour = NA),
-        legend.background = element_rect(fill = "#EAFAF1", colour = NA),
-        legend.box.background = element_rect(fill = "#EAFAF1", colour = NA))
+bg_green <- theme(panel.background = element_rect(fill = '#EAFAF1', colour = NA),
+        plot.background = element_rect(fill = '#EAFAF1', colour = NA),
+        legend.background = element_rect(fill = '#EAFAF1', colour = NA),
+        legend.box.background = element_rect(fill = '#EAFAF1', colour = NA))
 
-thm_dotplot <-  theme_ipsum_ps(grid="", axis="xy") +
+thm_dotplot <-  theme_ipsum_ps(grid='', axis='xy') +
   theme(axis.text.y = element_text(size = rel(.75)),
         axis.ticks.y = element_blank(),
         axis.title.x = element_text(size = rel(.75)),
@@ -57,10 +57,9 @@ Let's first read the data we are going to work with:
 
 ```{r, message=FALSE}
 # Reading poll data
-poll_data <- foreign::read.dta("data/pew_research_center_june_elect_wknd_data.dta")
+poll_data <- foreign::read.dta('data/pew_research_center_june_elect_wknd_data.dta')
 # Reading 2008 election results
-elec_2008 <- read_csv('data/2008ElectionResult.csv') %>% 
-  mutate(state=str_to_lower(state))
+elec_2008 <- read_csv('data/2008ElectionResult.csv')
 
 ```
 
@@ -68,17 +67,15 @@ elec_2008 <- read_csv('data/2008ElectionResult.csv') %>%
 
 ```{r, warning=FALSE, message=FALSE, fig.align='center'}
 vl_prop <- poll_data %>% 
-  # Excluding Alaska, Hawai, DC
-  filter(state %nin% c('alaska', 'hawaii', 'washington dc')) %>%
+  mutate(state=str_to_title(state)) %>%
+  filter(state %nin% c('Alaska', 'Hawaii', 'District of Columbia')) %>%
   drop_na(ideo) %>% 
   mutate(vl = as.numeric(ideo == 'very liberal')) %>% 
   group_by(state) %>% 
-  summarise(vl_p = sum(vl)/n())
+  summarise(n_very_liberal=sum(vl), n=n(), vl_p = n_very_liberal/n)
 
 vl_prop_ovs <- left_join(vl_prop, elec_2008, by='state')
-vl_prop_ovs <- vl_prop_ovs %>% mutate(state_abb=state.abb[match(str_to_title(state), state.name)])
-
-vl_prop_ovs
+vl_prop_ovs <- vl_prop_ovs %>% mutate(state_abb=state.abb[match(state, state.name)])
 
 ggplot(vl_prop_ovs, aes(x = vl_p, y = vote_Obama_pct, label=state)) + 
   geom_point() + 
@@ -89,14 +86,22 @@ ggplot(vl_prop_ovs, aes(x = vl_p, y = vote_Obama_pct, label=state)) +
   thm
 ```
 
-Following task is to calculate Bayes posterior mean, so we need to have an initial distribution. As depicted in book's example 2.7, one way to construct an initial distribution is [METHODOLOGY]
+It is reasonable to affirm the existence of a linear relation, however, there are some states which seems something far from this relation, Idaho (ID) and New Hampshire (NH), for example.
 
-We have following equations that parameters must satisfy in order to:
+For the Bayes estimation part of the exercise, in which a proportion is involved, the model we want to estimate is the following:
+
+\begin{align*}
+Y|vl_j  &\sim Bin(n, vl_j) \\
+vl_j &\sim Beta(\alpha, \beta)
+\end{align*}
+
+Lets remind that previous Beta-binomial model is a conjugate family, which has its mathematical convenience. Following step is to calculate $\alpha$ and $\beta$ parameters from Beta distribution. In this case, we will use data to estimate both of them. Even when it seems inappropriate to use same data to set initial distribution, this is considered just a useful approximation to hierarchical modelling approach later described in the book. with this in mind, equations $\alpha$  and $\beta$ should meet are the following:
 
 \begin{align*}
 E(nvl_j) &= \frac{n_j\alpha}{\alpha + \beta} \\
 Var(nvl_j) &= \frac{n_j\alpha\beta(\alpha + \beta + n_j)}{ (\alpha + \beta)^2(\alpha + \beta+1)}
 \end{align*}
+
 
 Parameters of the previous system of equations are:
 
@@ -113,12 +118,10 @@ Var\left(\frac{nvl_j}{n_j}\right) &= \frac{\alpha\beta(\alpha + \beta + n_j)}{n_
 In this case, we should note that to construct proportion in the variance equation, we should divide by constant $n_j^2$ both sides, while 
 $nvl_j$ remains as unknown parameter. Then we replace expected value and variance with equivalent sample values. Similarly, $n_j$ is replaced with sample mean (number of surveys by state in average). Following code calculates these values:
 
-
-
 ```{r, warning=FALSE, message=FALSE, fig.align='center'}
-E_p <- conteo_edo %>% summarize( e_p = mean(n_very_liberal/n )  ) %>% pull(e_p)
-E_n <- conteo_edo %>% pull(n) %>% mean()
-Var_p <- conteo_edo %>% summarize( var_p = var(n_very_liberal/n)  ) %>% pull(var_p)
+E_p <- vl_prop %>% summarize( e_p = mean(n_very_liberal/n )  ) %>% pull(e_p)
+E_n <- vl_prop %>% pull(n) %>% mean()
+Var_p <- vl_prop %>% summarize( var_p = var(n_very_liberal/n)  ) %>% pull(var_p)
 paste('E_p:', E_p)
 paste('Var_p:', Var_p)
 paste('E_n:', E_n)
@@ -127,10 +130,6 @@ paste('E_n:', E_n)
 
 
 [PENDING OF TRANSLATION]
-
-
-
-
 
 
 of  Estima el porcentaje de la población de cada estado (excluyendo Alaska, Hawai, y DC)  que se considera *very liberal*, utilizando el estimador de máxima verosimilitud.
